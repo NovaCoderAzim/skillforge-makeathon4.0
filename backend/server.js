@@ -17,6 +17,8 @@ app.use('/api/v1/admin', require('./routes/admin'));
 app.use('/api/v1/courses', require('./routes/courses'));
 app.use('/api/v1/code-tests', require('./routes/code-tests'));
 app.use('/api/v1/content', require('./routes/content'));
+app.use('/api/v1/user', require('./routes/user'));
+app.use('/api/v1/assignments', require('./routes/assignments'));
 
 // Basic health check route
 app.get('/api/health', (req, res) => {

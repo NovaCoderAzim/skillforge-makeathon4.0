@@ -4,6 +4,7 @@ const { User, Course, Enrollment, LessonProgress, ScheduledClass, CourseReview, 
 const { authMiddleware, getPasswordHash } = require('../middleware/auth');
 const Razorpay = require('razorpay');
 const { Op } = require('sequelize');
+const { createCertificatePDF } = require('../utils/pdf');
 
 const razorpay = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID || "rzp_test_Ru8lDcv8KvAiC0",
@@ -183,6 +184,50 @@ router.post('/meetings', authMiddleware, async (req, res) => {
     }
 });
 
+router.get('/meetings/instructor', authMiddleware, async (req, res) => {
+    try {
+        if (req.user.role !== "instructor") {
+            return res.status(403).json({ detail: "Instructor only" });
+        }
+        const meetings = await ScheduledClass.findAll({
+            where: { instructor_id: req.user.id },
+            include: [{ model: Course, as: 'course' }]
+        });
+        res.json(meetings.map(m => ({
+            id: m.id,
+            course_id: m.course_id,
+            course_title: m.course ? m.course.title : "Unknown Course",
+            title: m.title,
+            agenda: m.agenda,
+            start_time: m.start_time.toISOString(),
+            duration_minutes: m.duration_minutes,
+            meeting_link: m.meeting_link
+        })));
+    } catch (error) {
+        console.error("Get instructor meetings error:", error);
+        res.status(500).json({ detail: "Internal Server Error" });
+    }
+});
+
+router.delete('/meetings/:id', authMiddleware, async (req, res) => {
+    try {
+        if (req.user.role !== "instructor") {
+            return res.status(403).json({ detail: "Instructor only" });
+        }
+        const meeting = await ScheduledClass.findOne({
+            where: { id: req.params.id, instructor_id: req.user.id }
+        });
+        if (!meeting) {
+            return res.status(404).json({ detail: "Meeting not found" });
+        }
+        await meeting.destroy();
+        res.json({ message: "Meeting deleted successfully" });
+    } catch (error) {
+        console.error("Delete meeting error:", error);
+        res.status(500).json({ detail: "Internal Server Error" });
+    }
+});
+
 router.get('/meetings/student', authMiddleware, async (req, res) => {
     if (req.user.role !== "student") return res.status(403).json({ detail: "Student only" });
     try {
@@ -202,6 +247,125 @@ router.get('/meetings/student', authMiddleware, async (req, res) => {
             instructor: m.instructor ? m.instructor.full_name : "Instructor"
         })));
     } catch (error) {
+        res.status(500).json({ detail: "Internal Server Error" });
+    }
+});
+
+// Post Course Review
+router.post('/courses/:courseId/reviews', authMiddleware, async (req, res) => {
+    try {
+        const courseId = req.params.courseId;
+        const { rating, feedback } = req.body;
+        
+        const enrollment = await Enrollment.findOne({ where: { user_id: req.user.id, course_id: courseId } });
+        if (!enrollment) {
+            return res.status(403).json({ detail: "You must be enrolled in this course to leave a review." });
+        }
+
+        const review = await CourseReview.create({
+            user_id: req.user.id,
+            course_id: courseId,
+            rating: Number(rating) || 5,
+            feedback: feedback || ""
+        });
+
+        res.status(201).json({ message: "Review submitted successfully", review });
+    } catch (error) {
+        console.error("Post review error:", error);
+        res.status(500).json({ detail: "Internal Server Error" });
+    }
+});
+
+// Get Reviews for Instructor
+router.get('/instructor/reviews', authMiddleware, async (req, res) => {
+    try {
+        if (req.user.role !== "instructor") {
+            return res.status(403).json({ detail: "Only instructors can retrieve reviews." });
+        }
+
+        const reviews = await CourseReview.findAll({
+            include: [
+                {
+                    model: Course,
+                    as: 'course',
+                    where: { instructor_id: req.user.id }
+                },
+                {
+                    model: User,
+                    as: 'student'
+                }
+            ]
+        });
+
+        const formatted = reviews.map(r => ({
+            id: r.id,
+            course_id: r.course_id,
+            rating: r.rating,
+            text: r.feedback || "",
+            feedback: r.feedback || "",
+            student: r.student ? r.student.full_name : "Anonymous Student",
+            course: r.course ? r.course.title : "Unknown Course",
+            time: r.createdAt ? new Date(r.createdAt).toISOString().split('T')[0] : "N/A"
+        }));
+
+        res.json(formatted);
+    } catch (error) {
+        console.error("Get instructor reviews error:", error);
+        res.status(500).json({ detail: "Internal Server Error" });
+    }
+});
+
+// Free / Trial Course Enrollment
+router.post('/enroll/:courseId', authMiddleware, async (req, res) => {
+    try {
+        const courseId = req.params.courseId;
+        const { type } = req.body;
+
+        const course = await Course.findByPk(courseId);
+        if (!course) {
+            return res.status(404).json({ detail: "Course not found" });
+        }
+
+        const existing = await Enrollment.findOne({ where: { user_id: req.user.id, course_id: courseId } });
+        if (existing) {
+            return res.status(400).json({ detail: "Already enrolled in this course" });
+        }
+
+        let expiry_date = null;
+        if (type === "trial") {
+            expiry_date = new Date();
+            expiry_date.setDate(expiry_date.getDate() + 7);
+        }
+
+        const enrollment = await Enrollment.create({
+            user_id: req.user.id,
+            course_id: courseId,
+            enrollment_type: type || "trial",
+            expiry_date
+        });
+
+        res.status(201).json({ message: "Successfully enrolled", enrollment });
+    } catch (error) {
+        console.error("Enrollment error:", error);
+        res.status(500).json({ detail: "Internal Server Error" });
+    }
+});
+
+// Generate PDF Certificate route (matching the frontend expectations)
+router.get('/generate-pdf/:courseId', authMiddleware, async (req, res) => {
+    try {
+        const course = await Course.findByPk(req.params.courseId);
+        if (!course) return res.status(404).json({ detail: "Course not found" });
+
+        const dateStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase();
+        
+        const pdfBuffer = await createCertificatePDF(req.user.full_name.toUpperCase(), course.title.toUpperCase(), dateStr);
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${req.user.full_name}_Certificate.pdf"`);
+        res.send(pdfBuffer);
+    } catch (error) {
+        console.error("Generate PDF certificate error:", error);
         res.status(500).json({ detail: "Internal Server Error" });
     }
 });

@@ -87,4 +87,61 @@ router.patch('/:course_id/finalize', authMiddleware, async (req, res) => {
     }
 });
 
+// Reorder modules inside a course
+router.patch('/:course_id/modules/reorder', authMiddleware, async (req, res) => {
+    try {
+        const { module_ids } = req.body;
+        if (!Array.isArray(module_ids)) {
+            return res.status(400).json({ detail: "module_ids must be an array" });
+        }
+        
+        const course = await Course.findOne({ where: { id: req.params.course_id, instructor_id: req.user.id } });
+        if (!course) return res.status(404).json({ detail: "Course not found or unauthorized" });
+
+        for (let i = 0; i < module_ids.length; i++) {
+            await Module.update({ order: i }, { where: { id: module_ids[i], course_id: req.params.course_id } });
+        }
+        res.json({ message: "Modules reordered successfully" });
+    } catch (error) {
+        console.error("Reorder modules error:", error);
+        res.status(500).json({ detail: "Internal Server Error" });
+    }
+});
+
+// Reorder lessons across/inside modules of a course
+router.patch('/:course_id/lessons/reorder', authMiddleware, async (req, res) => {
+    try {
+        const { items } = req.body;
+        if (!Array.isArray(items)) {
+            return res.status(400).json({ detail: "items must be an array" });
+        }
+
+        const course = await Course.findOne({ where: { id: req.params.course_id, instructor_id: req.user.id } });
+        if (!course) return res.status(404).json({ detail: "Course not found or unauthorized" });
+
+        for (const item of items) {
+            const { lesson_id, module_id, order } = item;
+            await ContentItem.update({ module_id, order }, { where: { id: lesson_id } });
+        }
+        res.json({ message: "Lessons reordered successfully" });
+    } catch (error) {
+        console.error("Reorder lessons error:", error);
+        res.status(500).json({ detail: "Internal Server Error" });
+    }
+});
+
+// Delete a course
+router.delete('/:course_id', authMiddleware, async (req, res) => {
+    try {
+        const course = await Course.findOne({ where: { id: req.params.course_id, instructor_id: req.user.id } });
+        if (!course) return res.status(404).json({ detail: "Course not found or unauthorized" });
+        
+        await course.destroy();
+        res.json({ message: "Course deleted successfully" });
+    } catch (error) {
+        console.error("Delete course error:", error);
+        res.status(500).json({ detail: "Internal Server Error" });
+    }
+});
+
 module.exports = router;
