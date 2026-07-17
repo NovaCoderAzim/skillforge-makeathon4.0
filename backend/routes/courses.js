@@ -51,7 +51,9 @@ router.get('/', authMiddleware, async (req, res) => {
             }
             return res.json(result);
         }
-        const publishedCourses = await Course.findAll({ where: { is_published: true } });
+        const query = { is_published: true };
+        if (req.user.school_class_id) query.school_class_id = req.user.school_class_id;
+        const publishedCourses = await Course.findAll({ where: query });
         res.json(publishedCourses);
     } catch (error) {
         console.error(error);

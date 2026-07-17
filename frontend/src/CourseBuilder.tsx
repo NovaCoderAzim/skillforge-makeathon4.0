@@ -33,6 +33,7 @@ const getLessonIcon = (type: string) => {
 
 const CourseBuilder = () => {
   const { courseId } = useParams();
+  const navigate = useNavigate();
 
   // Course State
   const [courseTitle, setCourseTitle] = useState("Loading...");
@@ -298,7 +299,10 @@ const CourseBuilder = () => {
     setEditingItem(item);
     setActiveModal("EditItem");
     setItemTitle(item.title || "");
-    setItemUrl(item.url || "");
+    setItemUrl(item.content || item.url || "");
+    setDuration(item.duration ? item.duration.toString() : "");
+    setIsMandatory(item.is_mandatory || false);
+    setItemInstructions(item.instructions || "");
   };
 
   const handleEditSave = async () => {
@@ -306,7 +310,8 @@ const CourseBuilder = () => {
     try {
       const token = localStorage.getItem("token");
       await axios.patch(`http://127.0.0.1:8000/api/v1/content/${editingItem.id}`, {
-        title: itemTitle, url: itemUrl
+        title: itemTitle, url: itemUrl, duration: duration ? parseInt(duration) : null,
+        is_mandatory: isMandatory, instructions: itemInstructions
       }, { headers: { Authorization: `Bearer ${token}` } });
       setEditingItem(null); setActiveModal(null); fetchCourseData();
       triggerToast("Item updated successfully", "success");
