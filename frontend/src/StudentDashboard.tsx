@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { GlassToast } from "./components/GlassToast";
 import StudentMeetings from "./StudentMeetings";
+import { ProfileManager } from "./components/ProfileManager";
 
 import { runPythonLocally } from './utils/pyodideEnv';
 const API_BASE_URL = "http://127.0.0.1:8000/api/v1";
@@ -35,8 +36,25 @@ const StudentDashboard = () => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [activityTab, setActivityTab] = useState("assignments");
+  const [userData, setUserData] = useState<any>({ name: "Student", email: "...", initials: "ST", profile_picture_url: "" });
 
-  const userData = { name: "Student", email: "student@skillforge.com", initials: "ST" };
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await axios.get(`${API_BASE_URL}/profile/me`, { headers: { Authorization: `Bearer ${token}` } });
+        setUserData({
+          name: res.data.full_name || "Student",
+          email: res.data.email || "",
+          initials: (res.data.full_name || "ST").substring(0,2).toUpperCase(),
+          profile_picture_url: res.data.profile_picture_url || ""
+        });
+      } catch (err) {
+        console.error("Error fetching profile", err);
+      }
+    };
+    fetchProfile();
+  }, []);
 
   // Modal & Settings
   const [showModal, setShowModal] = useState(false);
@@ -663,16 +681,18 @@ const StudentDashboard = () => {
           </button>
 
           <div className="relative">
-            <button onClick={() => setShowProfileMenu(!showProfileMenu)} className="flex items-center gap-3 pl-2 pr-4 py-1.5 bg-white border border-gray-200 rounded-full hover:shadow-md transition-all">
-              <div className="w-8 h-8 rounded-full bg-gray-100 text-black flex items-center justify-center font-bold text-xs">{userData.initials}</div>
+            <button onClick={() => setShowProfileMenu(!showProfileMenu)} className="flex items-center gap-3 pl-4 pr-2 py-1.5 bg-white border border-gray-200 rounded-full hover:shadow-md transition-all">
               <span className="text-sm font-bold hidden md:block">{userData.name}</span>
+              <div className="w-8 h-8 rounded-full bg-gray-100 border-2 border-white text-black flex items-center justify-center font-bold text-xs overflow-hidden shrink-0">
+                {userData.profile_picture_url ? <img src={userData.profile_picture_url} alt="Profile" className="w-full h-full object-cover" /> : userData.initials}
+              </div>
             </button>
 
             <AnimatePresence>
               {showProfileMenu && (
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="absolute right-0 top-14 w-64 bg-white rounded-2xl shadow-2xl border border-gray-200 p-4 z-50">
                   <div className="mb-4 border-b border-gray-100 pb-4 px-2">
-                    <p className="font-black text-black">{userData.name}</p>
+                    <p className="font-black text-black truncate">{userData.name}</p>
                     <p className="text-xs text-gray-500 font-medium truncate">{userData.email}</p>
                   </div>
                   <button onClick={() => { setActiveTab("settings"); setShowProfileMenu(false); }} className="flex items-center gap-3 w-full p-3 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-black font-bold text-sm transition-colors mb-1"><Settings size={18} /> Account Settings</button>
@@ -1167,16 +1187,20 @@ const StudentDashboard = () => {
                 <button type="submit" disabled={savingSettings} className="w-full py-4 bg-black text-white rounded-xl font-bold shadow-lg hover:bg-gray-800 disabled:opacity-70 transition-colors">
                   {savingSettings ? "Updating..." : "Update Password"}
                 </button>
-              </form>
-            </div>
+        {/* TAB: MEETINGS */}
+        {activeTab === "meetings" && (
+          <StudentMeetings />
+        )}
+
+        {/* TAB: SETTINGS (PROFILE) */}
+        {activeTab === "settings" && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pb-20">
+            <ProfileManager 
+                role="student" 
+                onUpdateComplete={(updated) => setUserData({...userData, name: updated.full_name, profile_picture_url: updated.profile_picture_url, initials: (updated.full_name || "ST").substring(0,2).toUpperCase()})} 
+            />
           </motion.div>
         )}
-
-        {/* TAB: MEETINGS / CALENDAR */}
-        {activeTab === "meetings" && (
-            <StudentMeetings />
-        )}
-
       </main>
 
       {/* ============================================================================

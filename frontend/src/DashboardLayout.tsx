@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
+import axios from "axios";
 import {
     LayoutDashboard, BookOpen, Users, Settings, LogOut,
     Bell, ChevronDown, Zap, Code, Send, CheckCircle, Video, Layers
@@ -35,6 +36,24 @@ const DashboardLayout = () => {
     const [announceTarget, setAnnounceTarget] = useState("all");
     const [announceMsg, setAnnounceMsg] = useState("");
     const [announceSuccess, setAnnounceSuccess] = useState(false);
+
+    // Profile state
+    const [userProfile, setUserProfile] = useState<any>(null);
+
+    useEffect(() => {
+        const fetchProfile = async () => {
+            try {
+                const token = localStorage.getItem("token");
+                const res = await axios.get("http://127.0.0.1:8000/api/v1/profile/me", {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                setUserProfile(res.data);
+            } catch (err) {
+                console.error("Error fetching profile", err);
+            }
+        };
+        fetchProfile();
+    }, []);
 
     // Refs for click-outside
     const profileRef = useRef<HTMLDivElement>(null);
@@ -165,13 +184,13 @@ const DashboardLayout = () => {
 
                         {/* PROFILE MENU */}
                         <div ref={profileRef} className="relative">
-                            <button onClick={() => { setShowProfile(!showProfile); setShowNotifications(false); }} className="flex items-center gap-3 group p-1 pr-3 rounded-full hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200">
-                                <div className="w-10 h-10 rounded-full bg-slate-100 border-2 border-white shadow-sm flex items-center justify-center overflow-hidden">
-                                    <img src={`https://api.dicebear.com/7.x/notionists/svg?seed=SkillForge&backgroundColor=e2e8f0`} alt="avatar" className="w-full h-full object-cover" />
+                            <button onClick={() => { setShowProfile(!showProfile); setShowNotifications(false); }} className="flex items-center gap-3 group p-1 pl-3 rounded-full hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200">
+                                <div className="text-right hidden sm:block">
+                                    <p className="text-xs font-black text-black leading-none mb-0.5">{userProfile?.full_name || "Instructor"}</p>
+                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Instructor Panel</p>
                                 </div>
-                                <div className="text-left hidden sm:block">
-                                    <p className="text-xs font-black text-black leading-none mb-0.5">Instructor</p>
-                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Admin Panel</p>
+                                <div className="w-10 h-10 rounded-full bg-slate-100 border-2 border-white shadow-sm flex items-center justify-center overflow-hidden shrink-0">
+                                    <img src={userProfile?.profile_picture_url || `https://api.dicebear.com/7.x/notionists/svg?seed=SkillForge&backgroundColor=e2e8f0`} alt="avatar" className="w-full h-full object-cover" />
                                 </div>
                                 <ChevronDown size={14} className="text-slate-400 group-hover:text-black transition-colors" />
                             </button>
@@ -182,8 +201,8 @@ const DashboardLayout = () => {
                                         className="absolute top-14 right-0 w-64 bg-white/90 backdrop-blur-2xl border border-slate-200/60 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.1)] p-3 z-50"
                                     >
                                         <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 mb-2">
-                                            <p className="font-black text-sm text-black">admin@skillforge.com</p>
-                                            <p className="text-[10px] font-bold text-slate-500 uppercase mt-1">Super Admin</p>
+                                            <p className="font-black text-sm text-black truncate">{userProfile?.email || "admin@skillforge.com"}</p>
+                                            <p className="text-[10px] font-bold text-slate-500 uppercase mt-1">{userProfile?.role || "Instructor"}</p>
                                         </div>
                                         <button onClick={() => { navigate("/dashboard/settings"); setShowProfile(false); }} className="w-full flex items-center gap-3 px-4 py-3 text-xs font-black uppercase tracking-widest text-slate-600 hover:text-black hover:bg-slate-50 rounded-xl transition-colors">
                                             <Settings size={16} /> Platform Settings

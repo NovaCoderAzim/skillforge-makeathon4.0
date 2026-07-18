@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import {
     LayoutDashboard, BookOpen, Users, LogOut,
-    ChevronDown, Zap
+    ChevronDown, Zap, Settings
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
@@ -37,11 +37,8 @@ const AdminDashboardLayout = () => {
         try {
             const token = localStorage.getItem("token");
             if (!token) return;
-            const res = await axios.get(`${API_BASE_URL}/user/me`, { headers: { Authorization: `Bearer ${token}` } });
-            setUserData({
-                name: res.data.full_name || "Admin",
-                email: res.data.email || ""
-            });
+            const res = await axios.get(`${API_BASE_URL}/profile/me`, { headers: { Authorization: `Bearer ${token}` } });
+            setUserData(res.data);
         } catch (e) {
             console.error(e);
         }
@@ -100,13 +97,13 @@ const AdminDashboardLayout = () => {
                     <div className="flex items-center gap-4 relative">
                         {/* PROFILE MENU */}
                         <div ref={profileRef} className="relative">
-                            <button onClick={() => setShowProfile(!showProfile)} className="flex items-center gap-3 group p-1 pr-3 rounded-full hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200">
-                                <div className="w-10 h-10 rounded-full bg-slate-100 border-2 border-white shadow-sm flex items-center justify-center overflow-hidden">
-                                    <img src={`https://api.dicebear.com/7.x/notionists/svg?seed=SkillForgeAdmin&backgroundColor=e2e8f0`} alt="avatar" className="w-full h-full object-cover" />
-                                </div>
-                                <div className="text-left hidden sm:block">
-                                    <p className="text-xs font-black text-black leading-none mb-0.5">{userData.name}</p>
+                            <button onClick={() => setShowProfile(!showProfile)} className="flex items-center gap-3 group p-1 pl-3 rounded-full hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200">
+                                <div className="text-right hidden sm:block">
+                                    <p className="text-xs font-black text-black leading-none mb-0.5">{(userData as any).full_name || "Admin"}</p>
                                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Admin Panel</p>
+                                </div>
+                                <div className="w-10 h-10 rounded-full bg-slate-100 border-2 border-white shadow-sm flex items-center justify-center overflow-hidden shrink-0">
+                                    <img src={(userData as any).profile_picture_url || `https://api.dicebear.com/7.x/notionists/svg?seed=SkillForgeAdmin&backgroundColor=e2e8f0`} alt="avatar" className="w-full h-full object-cover" />
                                 </div>
                                 <ChevronDown size={14} className="text-slate-400 group-hover:text-black transition-colors" />
                             </button>
@@ -117,9 +114,12 @@ const AdminDashboardLayout = () => {
                                         className="absolute top-14 right-0 w-64 bg-white/90 backdrop-blur-2xl border border-slate-200/60 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.1)] p-3 z-50"
                                     >
                                         <div className="p-4 bg-slate-50 rounded-xl border border-slate-100 mb-2">
-                                            <p className="font-black text-sm text-black">{userData.email}</p>
+                                            <p className="font-black text-sm text-black truncate">{userData.email}</p>
                                             <p className="text-[10px] font-bold text-slate-500 uppercase mt-1">Super Admin</p>
                                         </div>
+                                        <button onClick={() => { navigate("/admin-dashboard/settings"); setShowProfile(false); }} className="w-full flex items-center gap-3 px-4 py-3 text-xs font-black uppercase tracking-widest text-slate-600 hover:text-black hover:bg-slate-50 rounded-xl transition-colors">
+                                            <Settings size={16} /> Profile Settings
+                                        </button>
                                         <div className="h-px w-full bg-slate-100 my-1"></div>
                                         <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 text-xs font-black uppercase tracking-widest text-red-500 hover:bg-red-50 rounded-xl transition-colors">
                                             <LogOut size={16} /> Secure Logout

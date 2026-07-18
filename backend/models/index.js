@@ -40,6 +40,7 @@ const User = sequelize.define('User', {
     zoom_client_secret: { type: DataTypes.STRING, allowNull: true },
     school_class_id: { type: DataTypes.INTEGER, allowNull: true },
     section: { type: DataTypes.STRING, allowNull: true },
+    profile_picture_url: { type: DataTypes.STRING, allowNull: true },
 }, { timestamps: true, tableName: 'users' });
 
 const SchoolClass = sequelize.define('SchoolClass', {
