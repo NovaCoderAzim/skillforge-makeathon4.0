@@ -1159,34 +1159,7 @@ const StudentDashboard = () => {
           </motion.div>
         )}
 
-        {/* TAB: SETTINGS */}
-        {activeTab === "settings" && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-2xl mx-auto pb-20">
-            <div className="bg-white/80 backdrop-blur-xl border border-white rounded-[2rem] p-10 shadow-lg">
-              <h2 className="text-2xl font-black mb-2">Account Settings</h2>
-              <p className="text-gray-500 font-medium mb-8">Manage your security and preferences.</p>
 
-              <form onSubmit={async (e) => {
-                e.preventDefault();
-                try {
-                  setSavingSettings(true);
-                  const token = localStorage.getItem("token");
-                  await axios.post(`${API_BASE_URL}/user/change-password`, { new_password: newPassword }, { headers: { Authorization: `Bearer ${token}` } });
-                  triggerToast("Password Updated Successfully!", "success");
-                  setNewPassword("");
-                } catch (err) {
-                  triggerToast("Failed to update password.", "error");
-                } finally {
-                  setSavingSettings(false);
-                }
-              }}>
-                <div className="mb-6">
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">New Password</label>
-                  <input type="password" required minLength={6} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="••••••••" className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl font-bold focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-all" />
-                </div>
-                <button type="submit" disabled={savingSettings} className="w-full py-4 bg-black text-white rounded-xl font-bold shadow-lg hover:bg-gray-800 disabled:opacity-70 transition-colors">
-                  {savingSettings ? "Updating..." : "Update Password"}
-                </button>
         {/* TAB: MEETINGS */}
         {activeTab === "meetings" && (
           <StudentMeetings />
