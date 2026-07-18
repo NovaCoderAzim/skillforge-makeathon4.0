@@ -1106,23 +1106,36 @@ const StudentDashboard = () => {
         {/* TAB: EXPLORE COURSES */}
         {activeTab === "explore" && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pb-20">
-            <h2 className="text-3xl font-black mb-8">Explore Catalog</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {availableCourses.map(c => (
-                <div key={c.id} className="bg-white/80 backdrop-blur-xl border border-white rounded-[2rem] p-6 shadow-lg hover:shadow-xl transition-shadow flex flex-col h-full">
-                  <div className="h-40 bg-gray-100 rounded-xl mb-6 overflow-hidden border border-gray-200 flex items-center justify-center text-gray-300">
-                    {c.image_url ? <img src={c.image_url} alt={c.title} className="w-full h-full object-cover" /> : <BookOpen size={40} />}
+            <h2 className="text-3xl font-black mb-2">Explore Catalog</h2>
+            <p className="text-gray-500 font-medium mb-8">Browse courses available for your class.</p>
+            
+            {availableCourses.length === 0 ? (
+              <div className="w-full bg-white rounded-3xl p-12 text-center border border-gray-100 shadow-sm flex flex-col items-center justify-center">
+                <Compass size={64} className="text-gray-200 mb-4" />
+                <h3 className="text-xl font-black text-gray-800 mb-2">No Courses Available</h3>
+                <p className="text-gray-500 font-medium max-w-sm">
+                  There are currently no new published courses available for your class. Check back later or ask your instructor!
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {availableCourses.map(c => (
+                  <div key={c.id} className="bg-white/80 backdrop-blur-xl border border-white rounded-[2rem] p-6 shadow-lg hover:shadow-xl transition-all hover:-translate-y-1 flex flex-col h-full">
+                    <div className="h-40 bg-gray-100 rounded-xl mb-6 overflow-hidden border border-gray-200 flex items-center justify-center text-gray-300">
+                      {c.image_url ? <img src={c.image_url} alt={c.title} className="w-full h-full object-cover" /> : <BookOpen size={40} />}
+                    </div>
+                    <h3 className="text-xl font-black mb-2 leading-tight">{c.title}</h3>
+                    <p className="text-xs text-gray-500 font-medium line-clamp-2 mb-6 flex-1">{c.description || "Learn new skills and upgrade your knowledge."}</p>
+                    <div className="flex justify-between items-center mt-auto pt-4 border-t border-gray-100">
+                      <span className="text-xs font-black text-blue-500 uppercase bg-blue-50 px-2 py-1 rounded-md">Class Assigned</span>
+                      <button onClick={() => openEnrollModal(c)} className="bg-black text-white font-bold py-2.5 px-5 rounded-lg flex items-center justify-center gap-2 hover:bg-gray-800 transition-colors shadow-md active:scale-95 text-xs uppercase tracking-wider">
+                        <ShoppingBag size={14} /> Request Enroll
+                      </button>
+                    </div>
                   </div>
-                  <h3 className="text-xl font-black mb-2 leading-tight">{c.title}</h3>
-                  <div className="flex justify-between items-center mt-auto pt-4">
-                    <span className="text-sm font-black text-gray-500 uppercase">Available</span>
-                    <button onClick={() => openEnrollModal(c)} className="bg-black text-white font-bold py-2 px-5 rounded-lg flex items-center justify-center gap-2 hover:bg-gray-800 transition-colors">
-                      <ShoppingBag size={16} /> Enroll
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </motion.div>
         )}
 
@@ -1196,7 +1209,7 @@ const StudentDashboard = () => {
               <button onClick={() => setShowModal(false)} className="absolute top-6 right-6 p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors"><X size={20} className="text-gray-600" /></button>
 
               <h2 className="text-3xl font-black mb-2 pr-10">{selectedCourse.title}</h2>
-              <p className="text-gray-500 font-medium mb-8">Unlock full lifetime access to this course.</p>
+              <p className="text-gray-500 font-medium mb-8">Submit a request to your staff to get access to this course.</p>
 
               <button onClick={handleEnrollRequest} disabled={processing} className="w-full py-4 bg-black hover:bg-gray-800 text-white rounded-xl font-bold shadow-lg shadow-black/20 transition-all disabled:opacity-70 flex items-center justify-center gap-2">
                 {processing ? "Sending Request..." : "Send Enroll Request"}
