@@ -22,7 +22,6 @@ import AdminDashboardLayout from "./AdminDashboardLayout";
 import ClassManagement from "./ClassManagement";
 import StaffManagement from "./StaffManagement";
 import AdminOverview from "./AdminOverview";
-import AdminSettings from "./AdminSettings";
 
 function App() {
   return (
@@ -38,7 +37,6 @@ function App() {
           <Route path="classes" element={<ClassManagement />} />
           <Route path="students" element={<StudentManagement />} />
           <Route path="staff" element={<StaffManagement />} />
-          <Route path="settings" element={<AdminSettings />} />
         </Route>
 
         {/* INSTRUCTOR ROUTES */}

@@ -936,16 +936,26 @@ const CourseBuilder = () => {
 
                 {activeModal !== "Code Test" && (
                   <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">External Link / URL</label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
-                        {/* <LinkIcon size={18} /> */} {/* LinkIcon was removed from imports, so commenting out or replacing */}
+                    <label className="block text-sm font-bold text-slate-700 mb-2">External Link / URL or File Upload</label>
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400">
+                          {/* <LinkIcon size={18} /> */}
+                        </div>
+                        <input
+                          value={itemUrl} onChange={(e) => setItemUrl(e.target.value)}
+                          placeholder="https://... or choose file"
+                          className="w-full text-lg p-4 pl-12 rounded-xl border-2 border-slate-200 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 font-medium transition-all"
+                        />
                       </div>
-                      <input
-                        value={itemUrl} onChange={(e) => setItemUrl(e.target.value)}
-                        placeholder="https://..."
-                        className="w-full text-lg p-4 pl-12 rounded-xl border-2 border-slate-200 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 font-medium transition-all"
-                      />
+                      <input type="file" onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onloadend = () => setItemUrl(reader.result as string);
+                          reader.readAsDataURL(file);
+                        }
+                      }} className="w-1/3 text-xs text-slate-500 file:mr-4 file:py-3 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer" />
                     </div>
                   </div>
                 )}

@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import { GlassToast } from "./components/GlassToast";
 import StudentMeetings from "./StudentMeetings";
-import { ProfileManager } from "./components/ProfileManager";
 
 import { runPythonLocally } from './utils/pyodideEnv';
 const API_BASE_URL = "http://127.0.0.1:8000/api/v1";
@@ -36,32 +35,18 @@ const StudentDashboard = () => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [activityTab, setActivityTab] = useState("assignments");
-  const [userData, setUserData] = useState<any>({ name: "Student", email: "...", initials: "ST", profile_picture_url: "" });
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const res = await axios.get(`${API_BASE_URL}/profile/me`, { headers: { Authorization: `Bearer ${token}` } });
-        setUserData({
-          name: res.data.full_name || "Student",
-          email: res.data.email || "",
-          initials: (res.data.full_name || "ST").substring(0,2).toUpperCase(),
-          profile_picture_url: res.data.profile_picture_url || ""
-        });
-      } catch (err) {
-        console.error("Error fetching profile", err);
-      }
-    };
-    fetchProfile();
-  }, []);
+  const [userProfile, setUserProfile] = useState<any>({ name: "Student", email: "", initials: "ST", profile_pic: "" });
 
   // Modal & Settings
   const [showModal, setShowModal] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [savingSettings, setSavingSettings] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [classesList, setClassesList] = useState<any[]>([]);
   const [toast, setToast] = useState({ show: false, message: "", type: "success" });
 
   // --- REVIEW SYSTEM STATES ---
@@ -122,9 +107,21 @@ const StudentDashboard = () => {
     try {
       const token = localStorage.getItem("token");
       const config = { headers: { Authorization: `Bearer ${token}` } };
+      const profileRes = await axios.get(`${API_BASE_URL}/profile`, config);
+      setUserProfile({
+        ...profileRes.data,
+        name: profileRes.data.full_name,
+        initials: profileRes.data.full_name.substring(0, 2).toUpperCase()
+      });
+
       const allRes = await axios.get(`${API_BASE_URL}/courses`, config);
       const myRes = await axios.get(`${API_BASE_URL}/my-courses`, config);
       const dashRes = await axios.get(`${API_BASE_URL}/student/dashboard`, config);
+      
+      try {
+        const classesRes = await axios.get(`${API_BASE_URL}/profile/classes`);
+        setClassesList(classesRes.data);
+      } catch (e) { console.error("Error fetching classes"); }
 
       const myCourseIds = new Set(myRes.data.map((c: Course) => c.id));
       setAvailableCourses(allRes.data.filter((c: Course) => !myCourseIds.has(c.id)));
@@ -681,19 +678,21 @@ const StudentDashboard = () => {
           </button>
 
           <div className="relative">
-            <button onClick={() => setShowProfileMenu(!showProfileMenu)} className="flex items-center gap-3 pl-4 pr-2 py-1.5 bg-white border border-gray-200 rounded-full hover:shadow-md transition-all">
-              <span className="text-sm font-bold hidden md:block">{userData.name}</span>
-              <div className="w-8 h-8 rounded-full bg-gray-100 border-2 border-white text-black flex items-center justify-center font-bold text-xs overflow-hidden shrink-0">
-                {userData.profile_picture_url ? <img src={userData.profile_picture_url} alt="Profile" className="w-full h-full object-cover" /> : userData.initials}
-              </div>
+            <button onClick={() => setShowProfileMenu(!showProfileMenu)} className="flex items-center gap-3 pl-2 pr-4 py-1.5 bg-white border border-gray-200 rounded-full hover:shadow-md transition-all">
+              {userProfile.profile_pic ? (
+                <img src={userProfile.profile_pic} alt="Profile" className="w-8 h-8 rounded-full object-cover border border-gray-200" />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-gray-100 text-black flex items-center justify-center font-bold text-xs">{userProfile.initials}</div>
+              )}
+              <span className="text-sm font-bold hidden md:block">{userProfile.name}</span>
             </button>
 
             <AnimatePresence>
               {showProfileMenu && (
                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="absolute right-0 top-14 w-64 bg-white rounded-2xl shadow-2xl border border-gray-200 p-4 z-50">
                   <div className="mb-4 border-b border-gray-100 pb-4 px-2">
-                    <p className="font-black text-black truncate">{userData.name}</p>
-                    <p className="text-xs text-gray-500 font-medium truncate">{userData.email}</p>
+                    <p className="font-black text-black">{userProfile.name}</p>
+                    <p className="text-xs text-gray-500 font-medium truncate">{userProfile.email}</p>
                   </div>
                   <button onClick={() => { setActiveTab("settings"); setShowProfileMenu(false); }} className="flex items-center gap-3 w-full p-3 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-black font-bold text-sm transition-colors mb-1"><Settings size={18} /> Account Settings</button>
                   <button onClick={handleLogout} className="flex items-center gap-3 w-full p-3 rounded-xl text-red-500 hover:bg-red-50 font-bold text-sm transition-colors"><LogOut size={18} /> Sign Out</button>
@@ -712,7 +711,7 @@ const StudentDashboard = () => {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="flex flex-col gap-6">
 
             <div className="mb-4">
-              <h1 className="text-3xl md:text-4xl font-black tracking-tight text-black">Forge Your Future, {userData.name}!</h1>
+              <h1 className="text-3xl md:text-4xl font-black tracking-tight text-black">Forge Your Future, {userProfile.name}!</h1>
               <p className="text-gray-500 font-medium mt-2">Welcome back to your learning hub.</p>
             </div>
 
@@ -1159,21 +1158,166 @@ const StudentDashboard = () => {
           </motion.div>
         )}
 
-
-        {/* TAB: MEETINGS */}
-        {activeTab === "meetings" && (
-          <StudentMeetings />
-        )}
-
-        {/* TAB: SETTINGS (PROFILE) */}
+        {/* TAB: SETTINGS */}
         {activeTab === "settings" && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="pb-20">
-            <ProfileManager 
-                role="student" 
-                onUpdateComplete={(updated) => setUserData({...userData, name: updated.full_name, profile_picture_url: updated.profile_picture_url, initials: (updated.full_name || "ST").substring(0,2).toUpperCase()})} 
-            />
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="max-w-3xl mx-auto pb-20">
+            <div className="bg-white rounded-[2rem] shadow-sm border border-gray-200 overflow-hidden">
+              
+              {/* Header */}
+              <div className="px-8 py-8 border-b border-gray-100 bg-gray-50/50">
+                <h2 className="text-2xl font-black text-slate-900 tracking-tight">Account Settings</h2>
+                <p className="text-slate-500 font-medium mt-1">Manage your public profile and security preferences.</p>
+              </div>
+
+              <div className="p-8 md:p-10">
+                
+                {/* --- PROFILE SECTION --- */}
+                <section className="mb-12">
+                  <div className="mb-8">
+                    <h3 className="text-lg font-black text-slate-900 flex items-center gap-2 tracking-tight">
+                      <User size={18} className="text-blue-500" /> Public Profile
+                    </h3>
+                  </div>
+
+                  <form onSubmit={async (e) => {
+                    e.preventDefault();
+                    try {
+                      setSavingProfile(true);
+                      const token = localStorage.getItem("token");
+                      const res = await axios.put(`${API_BASE_URL}/profile`, {
+                        full_name: userProfile.name,
+                        profile_pic: userProfile.profile_pic,
+                        school_class_id: userProfile.school_class_id,
+                        section: userProfile.section
+                      }, { headers: { Authorization: `Bearer ${token}` } });
+                      setUserProfile({
+                        ...res.data,
+                        name: res.data.full_name,
+                        initials: res.data.full_name.substring(0, 2).toUpperCase()
+                      });
+                      triggerToast("Profile Updated Successfully!", "success");
+                    } catch (err) {
+                      triggerToast("Failed to update profile.", "error");
+                    } finally {
+                      setSavingProfile(false);
+                    }
+                  }}>
+                    
+                    {/* Avatar Upload */}
+                    <div className="flex items-center gap-6 mb-8 p-6 bg-slate-50/50 rounded-2xl border border-slate-100">
+                      {userProfile.profile_pic ? (
+                        <img src={userProfile.profile_pic} alt="Profile" className="w-20 h-20 rounded-full object-cover shadow-sm border-2 border-white" />
+                      ) : (
+                        <div className="w-20 h-20 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-black text-2xl shadow-sm border-2 border-white">{userProfile.initials}</div>
+                      )}
+                      <div className="flex flex-col gap-2 flex-1">
+                        <label className="text-sm font-bold text-slate-700">Profile Picture</label>
+                        <div className="flex flex-col md:flex-row gap-3">
+                          <label className="cursor-pointer bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-black px-4 py-2 rounded-lg font-bold text-sm transition-all shadow-sm text-center">
+                            <span>Upload Image</span>
+                            <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onloadend = () => setUserProfile({...userProfile, profile_pic: reader.result as string});
+                                reader.readAsDataURL(file);
+                              }
+                            }} />
+                          </label>
+                          <input type="text" value={userProfile.profile_pic || ""} onChange={(e) => setUserProfile({...userProfile, profile_pic: e.target.value})} placeholder="Or paste image URL..." className="flex-1 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 transition-all font-medium" />
+                        </div>
+                        <p className="text-xs text-slate-400 font-medium">Recommended size: 256x256px. Max size: 2MB.</p>
+                      </div>
+                    </div>
+
+                    {/* Form Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Full Name</label>
+                        <input type="text" value={userProfile.name} onChange={(e) => setUserProfile({...userProfile, name: e.target.value})} required className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-900" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Email Address</label>
+                        <input type="email" value={userProfile.email} disabled className="w-full px-4 py-3 bg-slate-100/80 text-slate-400 border border-slate-200 rounded-xl font-bold cursor-not-allowed" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Class / Academic Year</label>
+                        <div className="relative">
+                          <select value={userProfile.school_class_id || ""} onChange={(e) => setUserProfile({...userProfile, school_class_id: e.target.value})} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-900 appearance-none">
+                            <option value="">Select your class...</option>
+                            {classesList.map(c => <option key={c.id} value={c.id}>{c.name} ({c.academic_year})</option>)}
+                          </select>
+                          <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 rotate-90" size={16} />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Section / Cohort</label>
+                        <input type="text" value={userProfile.section || ""} onChange={(e) => setUserProfile({...userProfile, section: e.target.value})} placeholder="e.g. Section A" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:outline-none focus:bg-white focus:border-blue-500 transition-all text-slate-900" />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end">
+                      <button type="submit" disabled={savingProfile} className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-bold transition-colors shadow-lg shadow-blue-600/20 disabled:opacity-70 flex items-center gap-2">
+                        {savingProfile ? "Saving..." : "Save Profile Changes"}
+                      </button>
+                    </div>
+                  </form>
+                </section>
+
+                <hr className="border-slate-100 my-10" />
+
+                {/* --- SECURITY SECTION --- */}
+                <section>
+                  <div className="mb-8">
+                    <h3 className="text-lg font-black text-slate-900 flex items-center gap-2 tracking-tight">
+                      <Lock size={18} className="text-slate-600" /> Account Security
+                    </h3>
+                  </div>
+
+                  <form onSubmit={async (e) => {
+                    e.preventDefault();
+                    try {
+                      setSavingSettings(true);
+                      const token = localStorage.getItem("token");
+                      await axios.put(`${API_BASE_URL}/profile/password`, { oldPassword, newPassword }, { headers: { Authorization: `Bearer ${token}` } });
+                      triggerToast("Password Updated Successfully!", "success");
+                      setOldPassword("");
+                      setNewPassword("");
+                    } catch (err: any) {
+                      triggerToast(err.response?.data?.error || "Failed to update password.", "error");
+                    } finally {
+                      setSavingSettings(false);
+                    }
+                  }}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Current Password</label>
+                        <input type="password" required value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} placeholder="••••••••" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:outline-none focus:bg-white focus:border-slate-900 transition-all text-slate-900" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">New Password</label>
+                        <input type="password" required minLength={6} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="••••••••" className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold focus:outline-none focus:bg-white focus:border-slate-900 transition-all text-slate-900" />
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-end">
+                      <button type="submit" disabled={savingSettings} className="bg-slate-900 hover:bg-black text-white px-8 py-3 rounded-xl font-bold transition-colors shadow-lg shadow-black/10 disabled:opacity-70 flex items-center gap-2">
+                        {savingSettings ? "Updating..." : "Update Password"}
+                      </button>
+                    </div>
+                  </form>
+                </section>
+
+              </div>
+            </div>
           </motion.div>
         )}
+
+        {/* TAB: MEETINGS / CALENDAR */}
+        {activeTab === "meetings" && (
+            <StudentMeetings />
+        )}
+
       </main>
 
       {/* ============================================================================
