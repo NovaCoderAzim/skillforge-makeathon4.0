@@ -21,7 +21,6 @@ import MeetingManager from "./MeetingManager";
 import AdminDashboardLayout from "./AdminDashboardLayout";
 import ClassManagement from "./ClassManagement";
 import StaffManagement from "./StaffManagement";
-import StaffManagement from "./StaffManagement";
 import AdminOverview from "./AdminOverview";
 import AdminSettings from "./AdminSettings";
 
