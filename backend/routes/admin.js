@@ -153,17 +153,19 @@ router.get('/students', async (req, res) => {
         });
 
         const out = students.map(s => {
-            const enrolled = s.enrollments.map(e => {
-                let days_left = null;
-                if (e.expiry_date) {
-                    days_left = Math.ceil((new Date(e.expiry_date) - new Date()) / (1000 * 60 * 60 * 24));
-                }
-                return {
-                    title: e.course ? e.course.title : "Unknown Course",
-                    tier: e.enrollment_type === "paid" ? "Paid" : "Free",
-                    days_left: days_left
-                };
-            });
+            const enrolled = s.enrollments
+                .filter(e => e.course != null)
+                .map(e => {
+                    let days_left = null;
+                    if (e.expiry_date) {
+                        days_left = Math.ceil((new Date(e.expiry_date) - new Date()) / (1000 * 60 * 60 * 24));
+                    }
+                    return {
+                        title: e.course.title,
+                        tier: e.enrollment_type === "paid" ? "Paid" : "Free",
+                        days_left: days_left
+                    };
+                });
 
             return {
                 id: s.id,

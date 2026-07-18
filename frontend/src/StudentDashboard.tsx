@@ -396,8 +396,8 @@ const StudentDashboard = () => {
   const handleStartTest = async () => {
     const token = localStorage.getItem("token");
     try {
-      const formData = new FormData(); formData.append("pass_key", passKeyInput);
-      const res = await axios.post(`${API_BASE_URL}/code-tests/${showPassKeyModal}/start`, formData, { headers: { Authorization: `Bearer ${token}` } });
+      const payload = { pass_key: passKeyInput };
+      const res = await axios.post(`${API_BASE_URL}/code-tests/${showPassKeyModal}/start`, payload, { headers: { Authorization: `Bearer ${token}` } });
       const prevWarns = localStorage.getItem(`warns_${res.data.id}`);
       if (prevWarns && parseInt(prevWarns) > 2) { triggerToast("⛔ You have been disqualified from this test.", "error"); return; }
       setActiveTest(res.data);
